@@ -34,7 +34,6 @@ class Bottle():
         self.percent_var.set("{:3f}%".format(data[1]/data[0]))
         self.oz = tk.Label(frame, textvariable=self.oz_var)
         self.percent = tk.Label(frame, textvariable=self.percent_var)
-       
 
         img = Image.open("transparent.gif")
         img = img.resize((100,120), Image.ANTIALIAS)
@@ -74,13 +73,24 @@ class App():
         self.scrollRec = tk.Scrollbar(self.recFrame, orient = 'vertical')
         self.recBox = tk.Listbox(self.recFrame, width = 40, height = 20, yscrollcommand=self.scrollRec.set)
         self.clearRec =tk.Button(self.window, text='CLEAR', command=self.clear)
+
+        logo = Image.open("mixowatch_logo.png")
+        logo = logo.resize((120,120), Image.ANTIALIAS)
+        self.logo = ImageTk.PhotoImage(logo)
+        self.logo_canvas = tk.Canvas(self.window, width = 120, height = 120)
+        self.logo_canvas.create_image(0,0, anchor=tk.NW, image=self.logo)
+        self.quit = tk.Button(self.window, text='QUIT', command=self.window.destroy)
+
     def _createLayout(self):
+        self.quit.grid(row=4, column = 4)
         self.recBox.pack(side = tk.LEFT)
         self.scrollRec.config(command = self.recBox.yview)
         self.scrollRec.pack(side = tk.RIGHT, fill=tk.Y)
         self.recFrame.grid(row=0, column=2, rowspan = 3)
         self.window.grid_columnconfigure(1, minsize=50)
+        self.window.grid_columnconfigure(3, minsize=30)
         self.clearRec.grid(row=4, column =2)
+        self.logo_canvas.grid(row = 1, column = 4)
 
     def _checkSerial(self):
         self.window.after(self.serial_delay, self._checkSerial)
@@ -113,6 +123,11 @@ class App():
             self.data[tag][1] = 0
         for bottle in self.bottles:
             bottle.update()
+
+        with open('database.txt', 'w') as f:
+            for tag in self.data:
+                line = "Tag {},{},{}\n".format(tag, self.data[tag][0], self.data[tag][1])
+                f.write(line)
         
     
             
@@ -138,7 +153,7 @@ class App():
 if __name__ == '__main__':
     root = tk.Tk()
     root.geometry("800x400")
-    root.title("Serial Reader")
+    root.title("MixoWatch")
     display = App(root)
     root.mainloop()
 
