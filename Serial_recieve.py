@@ -1,14 +1,16 @@
 import serial
 import tkinter as tk
 import time
+from datetime import datetime
 
 class RFRec():
     def __init__(self, port, bps = 9600):
         self.port = port
         self.bps = bps
         self.sp = serial.Serial(self.port, self.bps)
+        #print(self.sp)
         self.sp.flushInput()
-        self.sp = None
+        #self.sp = None
 
     def readSerialLine(self):
         if self.sp.inWaiting() > 0:
@@ -20,16 +22,20 @@ from PIL import ImageTk
 
 class Bottle():
     def __init__(self, frame,tag, data):
-        print('test')
-        print(frame)
+        self.data = data
+        self.oz_var = tk.StringVar()
+        self.percent_var = tk.StringVar()
         self.canvas = tk.Canvas(frame, width = 100, height = 120)
         self.red = self.canvas.create_rectangle(0, 0, 100, 100, fill = 'white')
         self.green = self.canvas.create_rectangle(0,112-106*(float(data[1])/float(data[0])), 100, 112, fill='teal')
         self.name = tk.Label(frame, text=tag)
         self.name.pack()
-        self.oz = tk.Label(frame, text="Remaining Oz: {}".format(data[1]))
-        self.percent = tk.Label(frame, text="{:3f}%".format(float(data[1])/float(data[0])))
-        
+        self.oz_var.set("Remaining Oz: {}".format(data[1]))
+        self.percent_var.set("{:3f}%".format(data[1]/data[0]))
+        self.oz = tk.Label(frame, textvariable=self.oz_var)
+        self.percent = tk.Label(frame, textvariable=self.percent_var)
+       
+
         img = Image.open("transparent.gif")
         img = img.resize((100,120), Image.ANTIALIAS)
         self.bottle_gif = ImageTk.PhotoImage(img)
@@ -42,9 +48,10 @@ class Bottle():
         self.canvas.grid(row=0, column = 0, rowspan =5)
         
     def update(self):
-        data = [20,60,40]
-        #self.canvas.coords(self.green, 0,112-106*(float(data[2])/float(data[1])), 100, 112)
-        
+        #data = [20,60,40]
+        self.canvas.coords(self.green, 0,112-106*(float(self.data[1])/float(self.data[0])), 100, 112)
+        self.oz_var.set("Remaining Oz: {:.2f}".format(self.data[1]))
+        self.percent_var.set("{:.1f}%".format(100*self.data[1]/self.data[0]))
 class App():
     def __init__(self, root):
         self.window = root
@@ -56,11 +63,12 @@ class App():
         
         self.data = {}
         self._fillData()
-        self._checkSerial()
+       # self._checkSerial()
         self.makeBottles()
         for bottle in self.bottles:
             bottle.update()
-
+        self._checkSerial()
+    
     def _createWidgets(self):
         self.recFrame =tk.Frame(self.window, width = 70, height = 100)
         self.recBox = tk.Listbox(self.recFrame, width = 40, height = 20)
@@ -78,16 +86,22 @@ class App():
             self.addPour()
         self.last_serial_read = None
     
-    def addPour(self,last_read):
-        tag = self.last_serial_read.split()[0]
+    def addPour(self):
+        cur_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        tag = self.last_serial_read.split()[1]
         self.last_serial_read = None
         timeout = time.time()
         while self.last_serial_read == None:
              self.last_serial_read = self.sp.readSerialLine()
              if ((time.time()-timeout)>1000):
                  break
-        full = tag + ' ' +self.last_serial_read
-        self.recBox.insert(tk.END, full)
+        tag = "".join(map(chr,tag))
+        oz = float(self.last_serial_read)/1.507
+        newline = '{}|{:.3f}|{}'.format(tag, oz, cur_time) 
+        self.data[tag][1] = self.data[tag][1] - float(self.last_serial_read)/1000
+        for bottle in self.bottles:
+            bottle.update()
+        self.recBox.insert(tk.END, newline)
 
     
             
@@ -95,7 +109,7 @@ class App():
         with open('database.txt', 'r') as d:
             for x in d:
                 line = x.split(',')
-                self.data[line[0]] = line[1:].copy()
+                self.data[line[0].split()[1]] = list(map(float,line[1:].copy()))
                 
     def makeBottles(self):
         self.bFrames = [(tk.Frame(self.window), data) for data in self.data]
