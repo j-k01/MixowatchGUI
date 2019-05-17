@@ -71,10 +71,13 @@ class App():
     
     def _createWidgets(self):
         self.recFrame =tk.Frame(self.window, width = 70, height = 100)
-        self.recBox = tk.Listbox(self.recFrame, width = 40, height = 20)
+        self.scrollRec = tk.Scrollbar(self.recFrame, orient = 'vertical')
+        self.recBox = tk.Listbox(self.recFrame, width = 40, height = 20, yscrollcommand=self.scrollRec.set)
         self.clearRec =tk.Button(self.window, text='CLEAR', command=self.clear)
     def _createLayout(self):
-        self.recBox.pack()
+        self.recBox.pack(side = tk.LEFT)
+        self.scrollRec.config(command = self.recBox.yview)
+        self.scrollRec.pack(side = tk.RIGHT, fill=tk.Y)
         self.recFrame.grid(row=0, column=2, rowspan = 3)
         self.window.grid_columnconfigure(1, minsize=50)
         self.clearRec.grid(row=4, column =2)
@@ -102,12 +105,15 @@ class App():
         update_data = self.data[tag][1] - float(self.last_serial_read)/1000/1.507
         if (update_data > 0):
             self.data[tag][1] = update_data
+            self.recBox.insert(tk.END, newline)
+            self.recBox.select_clear(self.recBox.size()-2)
+            self.recBox.select_set(tk.END)
+            self.recBox.yview(tk.END)
         else:
             self.data[tag][1] = 0
         for bottle in self.bottles:
             bottle.update()
-        self.recBox.insert(tk.END, newline)
-
+        
     
             
     def _fillData(self):
