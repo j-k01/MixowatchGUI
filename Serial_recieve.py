@@ -87,7 +87,7 @@ class App():
         self.last_serial_read = None
     
     def addPour(self):
-        cur_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        cur_time = datetime.now().strftime('%H:%M:%S  |   %Y-%m-%d')
         tag = self.last_serial_read.split()[1]
         self.last_serial_read = None
         timeout = time.time()
@@ -96,9 +96,14 @@ class App():
              if ((time.time()-timeout)>1000):
                  break
         tag = "".join(map(chr,tag))
-        oz = float(self.last_serial_read)/1.507
-        newline = '{}|{:.3f}|{}'.format(tag, oz, cur_time) 
-        self.data[tag][1] = self.data[tag][1] - float(self.last_serial_read)/1000
+        tagline = "Tag : " + tag
+        oz = "{:.3f} Oz".format(float(self.last_serial_read)/1000/1.507)
+        newline = '{:<12}|{:^10}|{:>27}'.format(tagline, oz, cur_time) 
+        update_data = self.data[tag][1] - float(self.last_serial_read)/1000/1.507
+        if (update_data > 0):
+            self.data[tag][1] = update_data
+        else:
+            self.data[tag][1] = 0
         for bottle in self.bottles:
             bottle.update()
         self.recBox.insert(tk.END, newline)
